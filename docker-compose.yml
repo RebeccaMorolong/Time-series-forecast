@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # Time-series forecasting API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./results:/app/results
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=development
+    command: python -m src.api
+    depends_on:
+      - postgres
+
+  # PostgreSQL database (for storing metrics and predictions)
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: timeseries_user
+      POSTGRES_PASSWORD: timeseries_password
+      POSTGRES_DB: timeseries_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # PgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+  # Optional: Airflow services (comment out if not needed)
+  # airflow-db:
+  #   image: postgres:14-alpine
+  #   environment:
+  #     POSTGRES_USER: airflow
+  #     POSTGRES_PASSWORD: airflow
+  #     POSTGRES_DB: airflow
+  #   ports:
+  #     - "5433:5432"
+  #   volumes:
+  #     - airflow_db:/var/lib/postgresql/data
+
+  # airflow-webserver:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.airflow
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     AIRFLOW_HOME: /airflow
+  #     AIRFLOW__CORE__DAGS_FOLDER: /app/dags
+  #     AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql://airflow:airflow@airflow-db:5432/airflow
+  #   volumes:
+  #     - ./dags:/airflow/dags
+  #     - ./data:/app/data
+  #   depends_on:
+  #     - airflow-db
+  #   command: airflow webserver
+
+  # Monitor and manage logs
+  # You can use: docker logs -f timeseries-forecast_api_1
+  # For more advanced monitoring, consider adding Prometheus/Grafana
+
+volumes:
+  postgres_data:
+  # airflow_db:
+
+networks:
+  default:
+    name: timeseries_network
